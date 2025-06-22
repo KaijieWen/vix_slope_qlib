@@ -81,5 +81,9 @@ class VixProvider:
         end_time: str | None = None,
         freq: str = "daily",
     ) -> pd.DataFrame:
-        return self.load(fields, instruments, freq, start_time, end_time)
+        return (
+            pd.concat(fields, instruments, freq, start_time, end_time)
+              .set_index(["instrument", "datetime"])   # <-- swap order
+              .sort_index()
+        )
 
