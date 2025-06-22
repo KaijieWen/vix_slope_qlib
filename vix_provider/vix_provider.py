@@ -32,6 +32,17 @@ class VixProvider:
     def instrument(self, *_, **__) -> List[str]:
         return self.instruments()
 
+
+    # ---------------------------------------------------------------
+    # called by D.calendar() when no freq arg is supplied
+    def calendar(self, freq: str = "daily"):
+        return self.__class__.calendar.__wrapped__(self, freq)  # reuse cached
+
+    # called by D.features(...)
+    def features(self, instruments, fields, start_time=None, end_time=None, freq="daily"):
+        return self.load(fields, instruments, freq, start_time, end_time)
+    # ---------------------------------------------------------------
+
     # Data loader
     def load(
         self,
