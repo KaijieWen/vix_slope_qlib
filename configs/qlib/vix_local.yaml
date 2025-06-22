@@ -1,0 +1,3 @@
+qlib_init:
+  provider_uri: ./qlib_data
+  provider: vix_provider.vix_provider.VixProvider
