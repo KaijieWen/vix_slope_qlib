@@ -44,7 +44,7 @@ def test_factor_parity():
     """
     for fname, expr in FEATURES.items():
         # skip intraday-only factors in this daily test
-        if fname in ["RET1", "MA10", "ATR10", "RET_FWD"]:
+        if fname in ["S1","S1_Z","S1_PCT","RET1", "MA10", "ATR10", "RET_FWD"]:
             continue
 
         new = (
