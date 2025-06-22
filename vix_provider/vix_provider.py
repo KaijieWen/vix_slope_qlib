@@ -5,7 +5,13 @@ import os
 from typing import List, Iterable
 import pandas as pd
 from functools import lru_cache
-from qlib.data.dataset.provider import BaseProvider
+
+# Qlib moved BaseProvider once; try both paths
+try:
+    from qlib.data.dataset.provider import BaseProvider
+except ImportError:
+    from qlib.data.dataset import BaseProvider
+
 
 class VixProvider(BaseProvider):
     def __init__(self, provider_uri: str):
