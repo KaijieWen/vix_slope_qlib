@@ -1,0 +1,10 @@
+2025-06-20 21:32:07 | 🟢 auto_loop launched – intraday every 15 min
+2025-06-20 21:32:08 | Stage 1/4 – Nightly-loop: data_etl.py
+2025-06-20 21:32:09 | Stage 2/4 – Nightly-loop: feature_engineering.py
+2025-06-20 21:32:09 | Stage 3/4 – Nightly-loop: train_backtest.py
+2025-06-20 21:32:11 | Stage 4/4 – Nightly-loop: live_predict.py
+Sleeping  15s …                              2025-06-20 21:32:27 | Stage 1/4 – Nightly-loop: data_etl.py
+2025-06-20 21:32:27 | Stage 2/4 – Nightly-loop: feature_engineering.py
+2025-06-20 21:32:28 | Stage 3/4 – Nightly-loop: train_backtest.py
+2025-06-20 21:32:28 | Stage 4/4 – Nightly-loop: live_predict.py
+Sleeping  15s …

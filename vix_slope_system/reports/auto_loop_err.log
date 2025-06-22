@@ -1,0 +1,26 @@
+2025-06-20 21:32:08,485 | >>> data_etl.py
+2025-06-20 21:32:09,042 | === ENTER /Users/wan/Desktop/vix_slope_system/data_etl.py ===
+2025-06-20 21:32:09,111 | Market closed – skipping fetch.
+2025-06-20 21:32:09,180 | >>> feature_engineering.py
+2025-06-20 21:32:09,450 | === ENTER /Users/wan/Desktop/vix_slope_system/feature_engineering.py ===
+2025-06-20 21:32:09,450 | === EXIT  /Users/wan/Desktop/vix_slope_system/feature_engineering.py ===
+2025-06-20 21:32:09,450 | <<< feature_engineering.py
+2025-06-20 21:32:09,508 | >>> train_backtest.py
+2025-06-20 21:32:09,510 | === ENTER /Users/wan/Desktop/vix_slope_system/train_backtest.py ===
+2025-06-20 21:32:11,480 | === EXIT  /Users/wan/Desktop/vix_slope_system/train_backtest.py ===
+2025-06-20 21:32:11,480 | <<< train_backtest.py
+2025-06-20 21:32:11,570 | >>> live_predict.py
+2025-06-20 21:32:11,862 | <<< live_predict.py
+2025-06-20 21:32:27,394 | >>> data_etl.py
+2025-06-20 21:32:27,765 | === ENTER /Users/wan/Desktop/vix_slope_system/data_etl.py ===
+2025-06-20 21:32:27,828 | Market closed – skipping fetch.
+2025-06-20 21:32:27,894 | >>> feature_engineering.py
+2025-06-20 21:32:28,175 | === ENTER /Users/wan/Desktop/vix_slope_system/feature_engineering.py ===
+2025-06-20 21:32:28,175 | === EXIT  /Users/wan/Desktop/vix_slope_system/feature_engineering.py ===
+2025-06-20 21:32:28,175 | <<< feature_engineering.py
+2025-06-20 21:32:28,228 | >>> train_backtest.py
+2025-06-20 21:32:28,228 | === ENTER /Users/wan/Desktop/vix_slope_system/train_backtest.py ===
+2025-06-20 21:32:28,896 | === EXIT  /Users/wan/Desktop/vix_slope_system/train_backtest.py ===
+2025-06-20 21:32:28,896 | <<< train_backtest.py
+2025-06-20 21:32:28,988 | >>> live_predict.py
+2025-06-20 21:32:29,258 | <<< live_predict.py
