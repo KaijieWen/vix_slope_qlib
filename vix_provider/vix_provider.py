@@ -30,7 +30,7 @@ class VixProvider:
     def instruments(self, freq: str = "daily") -> list[str]:
         p = os.path.join(self.root, freq)
         # return upper-case tickers so workflow uses “SPY”
-        return [f[:-8].upper() for f in os.listdir(p) if f.endswith(".parquet")]
+        return [f[:-8].upper().upper() for f in os.listdir(p) if f.endswith(".parquet")]
 
     # lets D.instruments() work without kwargs
     def instrument(self, *_a, **_kw):
