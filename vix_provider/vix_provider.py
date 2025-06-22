@@ -1,28 +1,22 @@
 """
 VixProvider – minimal custom Qlib provider for our Parquet store.
+Works on Qlib 0.9.6 without importing BaseProvider.
 """
 import os
 from typing import List, Iterable
 import pandas as pd
 from functools import lru_cache
 
-# Qlib moved BaseProvider once; try both paths
-try:
-    from qlib.data.dataset.provider import BaseProvider
-except ImportError:
-    from qlib.data.dataset import BaseProvider
 
-
-class VixProvider(BaseProvider):
+class VixProvider:                       # ← no BaseProvider
     def __init__(self, provider_uri: str):
-        super().__init__()
         self.root = os.path.abspath(provider_uri)
 
     # ---------- helpers ----------
     def _file(self, symbol: str, freq: str) -> str:
         return os.path.join(self.root, freq, f"{symbol}.parquet")
 
-    # ---------- mandatory API ----------
+    # ---------- APIs expected by Qlib ----------
     @lru_cache(maxsize=None)
     def calendar(self, freq: str):
         cal_path = os.path.join(self.root, freq, "calendar.txt")
