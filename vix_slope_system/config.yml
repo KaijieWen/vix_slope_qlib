@@ -1,24 +1,4 @@
-# ─── General ─────────────────────────────────────────────────────────
-start_date: "2018-01-01"
-
-symbols:
-  spy:  "SPY"
-  qqq:  "QQQ"
-  vixy: "VIXY"
-  vxz:  "VXZ"
-
-# ─── API keys (leave "" if not used) ─────────────────────────────────
-polygon_key: "AeycVwodfAxbIYNhCJuppZNZMFxBX3G8"
-tiingo_key:  ""
-quandl_key:  ""
-
-# ─── Local storage ──────────────────────────────────────────────────
 paths:
-  raw:    "data_raw/"
-  ready:  "data_ready/"
-  model:  "models/"
-  reports: "reports/"
-
-portfolio:
-  start_cash: 12000    # <— put any number here
-  max_day_trades: 3
+  raw:   "vix_slope_system/data_raw/"
+  ready: "vix_slope_system/data_ready/"
+symbols: ["spy", "vixy", "vxz"]

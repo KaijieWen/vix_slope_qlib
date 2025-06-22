@@ -1,16 +1,21 @@
-import pathlib, yaml, logging
+import os, yaml, pathlib
 
-def load_config(path: str = "config.yml"):
+def load_config(path: str | None = None):
+    """Return parsed YAML; fall back to sane defaults."""
+    path = path or pathlib.Path(__file__).with_name("config.yml")
+    if not path.exists():
+        return {"paths": {}, "symbols": []}
     with open(path, "r") as fh:
-        return yaml.safe_load(fh)
+        cfg = yaml.safe_load(fh) or {}
+    cfg.setdefault("paths", {})
+    cfg.setdefault("symbols", [])
+    return cfg
 
 CFG = load_config()
 
-def ensure_dirs() -> None:
-    """Create folders declared in config if they don’t yet exist."""
+def ensure_dirs():
     for p in CFG["paths"].values():
-        pathlib.Path(p).mkdir(parents=True, exist_ok=True)
+        os.makedirs(p, exist_ok=True)
 
-def log(msg: str, level=logging.INFO) -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s")
-    logging.log(level, msg)
+def log(msg, lvl=20):
+    print(f"{lvl}| {msg}")
