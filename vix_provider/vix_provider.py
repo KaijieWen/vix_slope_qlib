@@ -1,42 +1,39 @@
 """
-VixProvider – minimal custom Qlib provider for our Parquet store.
-Works with Qlib 0.9.6 helper APIs (`D.features`, `D.instruments`, …).
+VixProvider – custom Parquet provider for Qlib 0.9.6.
 """
 
 from __future__ import annotations
-import os
-from typing import List, Iterable
-import pandas as pd
+import os, pandas as pd
 from functools import lru_cache
+from typing import List, Iterable
 
 
 class VixProvider:
-    # ---------- boilerplate ---------- #
+    # ------------------------------------------------------------------
     def __init__(self, provider_uri: str):
         self.root = os.path.abspath(provider_uri)
 
+    # ---------- helpers ------------------------------------------------
     def _file(self, symbol: str, freq: str) -> str:
-        # always look for lower-case filenames
+        """Return full path for <symbol>.parquet (filenames are lower-case)."""
         return os.path.join(self.root, freq, f"{symbol.lower()}.parquet")
 
-
-    # ---------- calendar & symbols ---------- #
-    @lru_cache(maxsize=None)
+    # ---------- calendar & symbol list --------------------------------
+    @lru_cache(None)
     def calendar(self, freq: str = "daily"):
-        path = os.path.join(self.root, freq, "calendar.txt")
-        return [pd.Timestamp(x.strip()) for x in open(path)]
+        cal = os.path.join(self.root, freq, "calendar.txt")
+        return [pd.Timestamp(x.strip()) for x in open(cal)]
 
-    @lru_cache(maxsize=None)
+    @lru_cache(None)
     def instruments(self, freq: str = "daily") -> list[str]:
         p = os.path.join(self.root, freq)
-        # return upper-case tickers so workflow uses “SPY”
-        return [f[:-8].upper().upper() for f in os.listdir(p) if f.endswith(".parquet")]
+        return [f[:-8].upper() for f in os.listdir(p) if f.endswith(".parquet")]
 
-    # lets D.instruments() work without kwargs
-    def instrument(self, *_a, **_kw):
+    # alias so `D.instruments()` works
+    def instrument(self, *_, **__) -> list[str]:
         return self.instruments()
 
-    # ---------- core loader ---------- #
+    # ---------- core loader -------------------------------------------
     def load(
         self,
         fields: List[str],
@@ -45,10 +42,9 @@ class VixProvider:
         start_time: str | None = None,
         end_time: str | None = None,
     ) -> pd.DataFrame:
-        # strip leading '$' that Qlib adds
-        fields = [f.lstrip("$") for f in fields]
+        fields = [f.lstrip("$") for f in fields]          # Qlib passes “$close”
+        frames = []
 
-        parts = []
         for sym in instruments:
             fp = self._file(sym, freq)
             if not os.path.exists(fp):
@@ -57,22 +53,22 @@ class VixProvider:
             if start_time:
                 df = df.loc[start_time:end_time]
             df = (
-                df.reset_index()                          # index → column
+                df.reset_index()                         # index → column
                   .rename(columns={"index": "datetime"})
-                  .assign(instrument=sym)
+                  .assign(instrument=sym.upper())
             )
-            parts.append(df)
+            frames.append(df)
 
-        if not parts:
-            raise ValueError("No data loaded for given params")
+        if not frames:
+            raise ValueError("No data loaded for given parameters")
 
         return (
-            pd.concat(parts)
-              .set_index(["datetime", "instrument"])
+            pd.concat(frames)
+              .set_index(["instrument", "datetime"])     # instrument first
               .sort_index()
         )
 
-    # ---------- feature helper (called by D.features) ---------- #
+    # ---------- thin wrapper used by `D.features` ---------------------
     def features(
         self,
         instruments: Iterable[str],
@@ -81,9 +77,4 @@ class VixProvider:
         end_time: str | None = None,
         freq: str = "daily",
     ) -> pd.DataFrame:
-        return (
-            pd.concat(fields, instruments, freq, start_time, end_time)
-              .set_index(["instrument", "datetime"])   # <-- swap order
-              .sort_index()
-        )
-
+        return self.load(fields, instruments, freq, start_time, end_time)
