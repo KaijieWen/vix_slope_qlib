@@ -63,7 +63,7 @@ class VixProvider:
             df = pd.read_parquet(fp)[fields]           # fields now match columns
             if start_time:
                 df = df.loc[start_time:end_time]
-            df["instrument"] = sym
+    df["instrument"] = symn    df = df.reset_index().rename(columns={"index": "datetime"})  # index → columnn    dfs.append(df)n    continue  # skip the old append            df["instrument"] = sym
             dfs.append(df)
         if not dfs:
             raise ValueError("No data loaded")
