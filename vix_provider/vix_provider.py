@@ -45,25 +45,6 @@ class VixProvider:
 
     # Data loader
     def load(
-        self,
-        fields: List[str],
-        instruments: Iterable[str],
-        freq: str = "daily",
-        start_time: str = None,
-        end_time: str = None,
-    ) -> pd.DataFrame:
-        # ➡️  strip the leading “$” that Qlib puts on field names
-        fields = [f.lstrip("$") for f in fields]       #  << add this line
-
-        dfs = []
-        for sym in instruments:
-            fp = self._file(sym, freq)
-            if not os.path.exists(fp):
-                continue
-            df = pd.read_parquet(fp)[fields]           # fields now match columns
-            if start_time:
-                df = df.loc[start_time:end_time]
-    df["instrument"] = symn    df = df.reset_index().rename(columns={"index": "datetime"})  # index → columnn    dfs.append(df)n    continue  # skip the old append            df["instrument"] = sym
             dfs.append(df)
         if not dfs:
             raise ValueError("No data loaded")
