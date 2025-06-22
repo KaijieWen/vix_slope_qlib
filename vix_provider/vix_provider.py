@@ -72,9 +72,13 @@ class VixProvider:
     def features(
         self,
         instruments: Iterable[str],
-        fields: List[str],
+        fields: list[str],
         start_time: str | None = None,
         end_time: str | None = None,
         freq: str = "daily",
     ) -> pd.DataFrame:
-        return self.load(fields, instruments, freq, start_time, end_time)
+        df = self.load(fields, instruments, freq, start_time, end_time)
+
+        # map   close → $close,   open → $open,  ...
+        rename_map = {f.lstrip("$"): f for f in fields}
+        return df.rename(columns=rename_map)
