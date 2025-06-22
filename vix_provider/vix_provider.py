@@ -16,7 +16,9 @@ class VixProvider:
         self.root = os.path.abspath(provider_uri)
 
     def _file(self, symbol: str, freq: str) -> str:
-        return os.path.join(self.root, freq, f"{symbol}.parquet")
+        # always look for lower-case filenames
+        return os.path.join(self.root, freq, f"{symbol.lower()}.parquet")
+
 
     # ---------- calendar & symbols ---------- #
     @lru_cache(maxsize=None)
@@ -25,9 +27,10 @@ class VixProvider:
         return [pd.Timestamp(x.strip()) for x in open(path)]
 
     @lru_cache(maxsize=None)
-    def instruments(self, freq: str = "daily") -> List[str]:
+    def instruments(self, freq: str = "daily") -> list[str]:
         p = os.path.join(self.root, freq)
-        return [f[:-8] for f in os.listdir(p) if f.endswith(".parquet")]
+        # return upper-case tickers so workflow uses “SPY”
+        return [f[:-8].upper() for f in os.listdir(p) if f.endswith(".parquet")]
 
     # lets D.instruments() work without kwargs
     def instrument(self, *_a, **_kw):
