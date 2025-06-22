@@ -1,0 +1,6 @@
+{
+  "name": "qlib310",
+  "settings": {
+    "python.defaultInterpreterPath": "/opt/conda/envs/qlib310/bin/python"
+  }
+}
