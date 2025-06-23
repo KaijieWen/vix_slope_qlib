@@ -1,24 +1,30 @@
 """
-VixProvider – custom Parquet provider for Qlib 0.9.6.
+VixProvider – custom Parquet provider for Qlib 0.9.6
+====================================================
+*   Filenames are lower-case  <symbol>.parquet
+*   Instruments are exposed upper-case  (“SPY”, “VIXY”, “VXZ”…)
+*   Returned DataFrame index order follows Qlib convention:
+        level-0  →  instrument
+        level-1  →  datetime
 """
 
 from __future__ import annotations
 import os, pandas as pd
 from functools import lru_cache
-from typing import List, Iterable
+from typing import Iterable, List
 
 
 class VixProvider:
-    # ------------------------------------------------------------------
+    # -----------------------------------------------------------------
     def __init__(self, provider_uri: str):
         self.root = os.path.abspath(provider_uri)
 
-    # ---------- helpers ------------------------------------------------
+    # -------- helpers -------------------------------------------------
     def _file(self, symbol: str, freq: str) -> str:
-        """Return full path for <symbol>.parquet (filenames are lower-case)."""
+        """Path to <root>/<freq>/<symbol>.parquet (file names are lower-case)."""
         return os.path.join(self.root, freq, f"{symbol.lower()}.parquet")
 
-    # ---------- calendar & symbol list --------------------------------
+    # -------- calendar & symbols --------------------------------------
     @lru_cache(None)
     def calendar(self, freq: str = "daily"):
         cal = os.path.join(self.root, freq, "calendar.txt")
@@ -29,11 +35,11 @@ class VixProvider:
         p = os.path.join(self.root, freq)
         return [f[:-8].upper() for f in os.listdir(p) if f.endswith(".parquet")]
 
-    # alias so `D.instruments()` works
-    def instrument(self, *_, **__) -> list[str]:
+    # alias so `D.instruments()` works without args
+    def instrument(self, *_a, **_kw) -> list[str]:
         return self.instruments()
 
-    # ---------- core loader -------------------------------------------
+    # -------- core loader ---------------------------------------------
     def load(
         self,
         fields: List[str],
@@ -42,9 +48,11 @@ class VixProvider:
         start_time: str | None = None,
         end_time: str | None = None,
     ) -> pd.DataFrame:
-        fields = [f.lstrip("$") for f in fields]          # Qlib passes “$close”
-        frames = []
+        """Return MultiIndexed DataFrame (instrument, datetime)."""
+        # Qlib prefixes raw fields with '$'; drop it for parquet cols
+        fields = [f.lstrip("$") for f in fields]
 
+        frames = []
         for sym in instruments:
             fp = self._file(sym, freq)
             if not os.path.exists(fp):
@@ -64,21 +72,6 @@ class VixProvider:
 
         return (
             pd.concat(frames)
-              .set_index(["instrument", "datetime"])     # instrument first
+              .set_index(["instrument", "datetime"])
               .sort_index()
         )
-
-    # ---------- thin wrapper used by `D.features` ---------------------
-    def features(
-        self,
-        instruments: Iterable[str],
-        fields: list[str],
-        start_time: str | None = None,
-        end_time: str | None = None,
-        freq: str = "daily",
-    ) -> pd.DataFrame:
-        df = self.load(fields, instruments, freq, start_time, end_time)
-
-        # map   close → $close,   open → $open,  ...
-        rename_map = {f.lstrip("$"): f for f in fields}
-        return df.rename(columns=rename_map)
