@@ -108,14 +108,20 @@ class VixProvider:
                 )
 
             # 2) RV5 ---------------------------------------------------------
-            elif tag.lower() == "std(log($spy_close).diff(1),5)*15.874507866387544".lower():
+            elif (tag.lower()
+                == "std(log($spy_close).diff(1),5)*15.874507866387544".lower()
+            ):
                 spy = base["SPY"]
-                rv  = np.log(spy).diff().rolling(5).std() * 15.874507866387544
+                rv  = (
+                    np.log(spy).diff()
+                    .rolling(5).std(ddof=0)           # ←  **ddof = 0**  (pop std)
+                    * 15.874507866387544
+                )
                 col = (
                     rv.to_frame(name=f)
-                      .assign(instrument="SPY")
-                      .set_index("instrument", append=True)
-                      .swaplevel()                     # (instrument, datetime)
+                    .assign(instrument="SPY")
+                    .set_index("instrument", append=True)
+                    .swaplevel()
                 )
 
             # 3) target labels ----------------------------------------------
