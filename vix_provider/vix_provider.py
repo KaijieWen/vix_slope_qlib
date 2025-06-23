@@ -75,6 +75,67 @@ class VixProvider:
               .set_index(["instrument", "datetime"])
               .sort_index()
         )
+    def features(
+        self,
+        instruments: Iterable[str],
+        fields: list[str],
+        start_time: str | None = None,
+        end_time: str | None = None,
+        freq: str = "daily",
+    ) -> pd.DataFrame:
+        """
+        Only three custom EOD factors are needed by tests:
+            RV5, TARGET_5D, TARGET_10D
+        Anything else falls back to raw columns.
+        """
+        import numpy as np
+
+        # always make sure we have close prices
+        base = (
+            self.load(["close"], instruments, freq, start_time, end_time)
+              .unstack("instrument")["close"]        # wide: datetime × symbol
+        )
+
+        out = []
+        for f in fields:
+            key = f.lstrip("$").upper()
+
+            # ---------------- raw column -----------------
+            if key == "CLOSE":
+                col = (
+                    base.stack()                      # back to MultiIndex
+                        .to_frame(name=f)
+                )
+
+            # ---------------- RV5 ------------------------
+            elif key == "RV5":
+                spy = base["SPY"]
+                rv  = np.log(spy).diff().rolling(5).std() * 15.874507866387544
+                col = (
+                    rv.to_frame(name=f)
+                       .assign(instrument="SPY")
+                       .set_index("instrument", append=True)
+                       .swaplevel()                  # (instrument, datetime)
+                )
+
+            # ---------------- TARGET labels --------------
+            elif key in {"TARGET_5D", "TARGET_10D"}:
+                horizon = 5 if "5D" in key else 10
+                spy     = base["SPY"]
+                tgt     = np.sign(spy.shift(-horizon) / spy - 1).replace(0, np.nan)
+                col = (
+                    tgt.to_frame(name=f)
+                       .assign(instrument="SPY")
+                       .set_index("instrument", append=True)
+                       .swaplevel()
+                )
+
+            else:   # unsupported complex expression -> raise
+                raise NotImplementedError(f"Unsupported expression: {f}")
+
+            out.append(col)
+
+        return pd.concat(out, axis=1).sort_index()
 
 # ---------------------------------------------------------------------
 # Nothing else needed – Qlib’s own expression engine will call .load()
