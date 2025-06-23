@@ -114,7 +114,7 @@ class VixProvider:
                 spy = base["SPY"]
                 rv  = (
                     np.log(spy).diff()
-                    .rolling(5).std(ddof=0)           # ←  **ddof = 0**  (pop std)
+                    .rolling(5).std()           # ←  **ddof = 0**  (pop std)
                     * 15.874507866387544
                 )
                 col = (
