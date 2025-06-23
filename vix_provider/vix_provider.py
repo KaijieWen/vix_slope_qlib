@@ -1,11 +1,9 @@
 """
-VixProvider – custom Parquet provider for Qlib 0.9.6
-====================================================
-*   Filenames are lower-case  <symbol>.parquet
-*   Instruments are exposed upper-case  (“SPY”, “VIXY”, “VXZ”…)
-*   Returned DataFrame index order follows Qlib convention:
-        level-0  →  instrument
-        level-1  →  datetime
+VixProvider – Parquet data provider for Qlib 0.9.6
+==================================================
+* file names stored lower-case     <symbol>.parquet
+* instruments exposed upper-case (“SPY”, “VIXY”, “VXZ”, …)
+* returns MultiIndexed DataFrame  (instrument, datetime)
 """
 
 from __future__ import annotations
@@ -13,44 +11,45 @@ import os, pandas as pd
 from functools import lru_cache
 from typing import Iterable, List
 
-
+# ---------------------------------------------------------------------
 class VixProvider:
-    # -----------------------------------------------------------------
+    # ----- boilerplate ------------------------------------------------
     def __init__(self, provider_uri: str):
         self.root = os.path.abspath(provider_uri)
 
-    # -------- helpers -------------------------------------------------
     def _file(self, symbol: str, freq: str) -> str:
-        """Path to <root>/<freq>/<symbol>.parquet (file names are lower-case)."""
         return os.path.join(self.root, freq, f"{symbol.lower()}.parquet")
 
-    # -------- calendar & symbols --------------------------------------
+    # ----- calendar & symbols ----------------------------------------
     @lru_cache(None)
     def calendar(self, freq: str = "daily"):
-        cal = os.path.join(self.root, freq, "calendar.txt")
-        return [pd.Timestamp(x.strip()) for x in open(cal)]
+        fp = os.path.join(self.root, freq, "calendar.txt")
+        return [pd.Timestamp(x.strip()) for x in open(fp)]
 
     @lru_cache(None)
     def instruments(self, freq: str = "daily") -> list[str]:
         p = os.path.join(self.root, freq)
         return [f[:-8].upper() for f in os.listdir(p) if f.endswith(".parquet")]
 
-    # alias so `D.instruments()` works without args
+    # alias so  D.instruments()  works without kwargs
     def instrument(self, *_a, **_kw) -> list[str]:
         return self.instruments()
 
-    # -------- core loader ---------------------------------------------
+    # ----- core loader ------------------------------------------------
     def load(
         self,
         fields: List[str],
         instruments: Iterable[str],
         freq: str = "daily",
         start_time: str | None = None,
-        end_time: str | None = None,
+        end_time:   str | None = None,
     ) -> pd.DataFrame:
-        """Return MultiIndexed DataFrame (instrument, datetime)."""
-        # Qlib prefixes raw fields with '$'; drop it for parquet cols
-        fields = [f.lstrip("$") for f in fields]
+        """
+        Return raw columns only.
+        Expression parsing is handled by Qlib’s calculator layer,
+        so this method just delivers the underlying data.
+        """
+        fields = [f.lstrip("$") for f in fields]          # "$close" → "close"
 
         frames = []
         for sym in instruments:
@@ -60,8 +59,9 @@ class VixProvider:
             df = pd.read_parquet(fp)[fields]
             if start_time:
                 df = df.loc[start_time:end_time]
+
             df = (
-                df.reset_index()                         # index → column
+                df.reset_index()                          # index ⇒ column
                   .rename(columns={"index": "datetime"})
                   .assign(instrument=sym.upper())
             )
@@ -75,3 +75,7 @@ class VixProvider:
               .set_index(["instrument", "datetime"])
               .sort_index()
         )
+
+# ---------------------------------------------------------------------
+# Nothing else needed – Qlib’s own expression engine will call .load()
+# to obtain the primitive columns it needs for any DSL expression.
