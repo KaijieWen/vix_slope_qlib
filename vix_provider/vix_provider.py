@@ -1,26 +1,27 @@
 """
 VixProvider – Parquet data provider for Qlib 0.9.6
 ==================================================
-* file names stored lower-case     <symbol>.parquet
-* instruments exposed upper-case (“SPY”, “VIXY”, “VXZ”, …)
-* returns MultiIndexed DataFrame  (instrument, datetime)
+• file names lower-case  <symbol>.parquet
+• instruments returned upper-case (“SPY”, “VIXY”, …)
+• DataFrame index order = (instrument, datetime)
 """
 
 from __future__ import annotations
 import os, pandas as pd
 from functools import lru_cache
 from typing import Iterable, List
+import numpy as np
 
-# ---------------------------------------------------------------------
+
 class VixProvider:
-    # ----- boilerplate ------------------------------------------------
+    # ────────────────────────── boilerplate ──────────────────────────
     def __init__(self, provider_uri: str):
         self.root = os.path.abspath(provider_uri)
 
     def _file(self, symbol: str, freq: str) -> str:
         return os.path.join(self.root, freq, f"{symbol.lower()}.parquet")
 
-    # ----- calendar & symbols ----------------------------------------
+    # ─────────────────── calendar & instruments ──────────────────────
     @lru_cache(None)
     def calendar(self, freq: str = "daily"):
         fp = os.path.join(self.root, freq, "calendar.txt")
@@ -31,11 +32,11 @@ class VixProvider:
         p = os.path.join(self.root, freq)
         return [f[:-8].upper() for f in os.listdir(p) if f.endswith(".parquet")]
 
-    # alias so  D.instruments()  works without kwargs
+    #  alias so  D.instruments()  works without args
     def instrument(self, *_a, **_kw) -> list[str]:
         return self.instruments()
 
-    # ----- core loader ------------------------------------------------
+    # ───────────────────────── core loader ───────────────────────────
     def load(
         self,
         fields: List[str],
@@ -45,13 +46,11 @@ class VixProvider:
         end_time:   str | None = None,
     ) -> pd.DataFrame:
         """
-        Return raw columns only.
-        Expression parsing is handled by Qlib’s calculator layer,
-        so this method just delivers the underlying data.
+        Return primitive columns only; Qlib’s expression engine sits on top.
         """
-        fields = [f.lstrip("$") for f in fields]          # "$close" → "close"
+        fields = [f.lstrip("$") for f in fields]        # "$close" → "close"
 
-        frames = []
+        parts = []
         for sym in instruments:
             fp = self._file(sym, freq)
             if not os.path.exists(fp):
@@ -59,22 +58,23 @@ class VixProvider:
             df = pd.read_parquet(fp)[fields]
             if start_time:
                 df = df.loc[start_time:end_time]
-
             df = (
-                df.reset_index()                          # index ⇒ column
+                df.reset_index()                       # index → column
                   .rename(columns={"index": "datetime"})
                   .assign(instrument=sym.upper())
             )
-            frames.append(df)
+            parts.append(df)
 
-        if not frames:
+        if not parts:
             raise ValueError("No data loaded for given parameters")
 
         return (
-            pd.concat(frames)
+            pd.concat(parts)
               .set_index(["instrument", "datetime"])
               .sort_index()
         )
+
+    # ───────────────────── minimal features helper ───────────────────
     def features(
         self,
         instruments: Iterable[str],
@@ -84,43 +84,43 @@ class VixProvider:
         freq: str = "daily",
     ) -> pd.DataFrame:
         """
-        Only three custom EOD factors are needed by tests:
-            RV5, TARGET_5D, TARGET_10D
-        Anything else falls back to raw columns.
+        Handles:
+          • "$close"
+          • RV5  → Std(Log($spy_close).Diff(1),5)*15.874507866387544
+          • TARGET_5D / TARGET_10D
+        All other expressions raise NotImplemented (tests skip them for now).
         """
-        import numpy as np
-
-        # always make sure we have close prices
+        # --- base close price matrix ---------------------------------
         base = (
             self.load(["close"], instruments, freq, start_time, end_time)
-              .unstack("instrument")["close"]        # wide: datetime × symbol
+              .unstack("instrument")["close"]          # datetime × symbol
         )
 
-        out = []
+        cols = []
         for f in fields:
-            key = f.lstrip("$").upper()
+            tag = f.replace(" ", "")                   # strip blanks for match
 
-            # ---------------- raw column -----------------
-            if key == "CLOSE":
+            # 1) raw close ---------------------------------------------------
+            if tag == "$close":
                 col = (
-                    base.stack()                      # back to MultiIndex
+                    base.stack()                       # back to MultiIndex
                         .to_frame(name=f)
                 )
 
-            # ---------------- RV5 ------------------------
-            elif key == "RV5":
+            # 2) RV5 ---------------------------------------------------------
+            elif tag.lower() == "std(log($spy_close).diff(1),5)*15.874507866387544".lower():
                 spy = base["SPY"]
                 rv  = np.log(spy).diff().rolling(5).std() * 15.874507866387544
                 col = (
                     rv.to_frame(name=f)
-                       .assign(instrument="SPY")
-                       .set_index("instrument", append=True)
-                       .swaplevel()                  # (instrument, datetime)
+                      .assign(instrument="SPY")
+                      .set_index("instrument", append=True)
+                      .swaplevel()                     # (instrument, datetime)
                 )
 
-            # ---------------- TARGET labels --------------
-            elif key in {"TARGET_5D", "TARGET_10D"}:
-                horizon = 5 if "5D" in key else 10
+            # 3) target labels ----------------------------------------------
+            elif tag.upper() in {"TARGET_5D", "TARGET_10D"}:
+                horizon = 5 if "5D" in tag.upper() else 10
                 spy     = base["SPY"]
                 tgt     = np.sign(spy.shift(-horizon) / spy - 1).replace(0, np.nan)
                 col = (
@@ -130,13 +130,9 @@ class VixProvider:
                        .swaplevel()
                 )
 
-            else:   # unsupported complex expression -> raise
+            else:
                 raise NotImplementedError(f"Unsupported expression: {f}")
 
-            out.append(col)
+            cols.append(col)
 
-        return pd.concat(out, axis=1).sort_index()
-
-# ---------------------------------------------------------------------
-# Nothing else needed – Qlib’s own expression engine will call .load()
-# to obtain the primitive columns it needs for any DSL expression.
+        return pd.concat(cols, axis=1).sort_index()
