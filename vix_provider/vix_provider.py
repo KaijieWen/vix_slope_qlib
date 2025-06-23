@@ -55,7 +55,16 @@ class VixProvider:
             fp = self._file(sym, freq)
             if not os.path.exists(fp):
                 continue
-            df = pd.read_parquet(fp)[fields]
+            raw = pd.read_parquet(fp)
+            if (
+                "close" in fields
+                and "close" not in raw.columns
+                and "adj close" in raw.columns
+            ):
+                raw["close"] = raw["adj close"]
+            df = raw[fields]
+            if start_time:
+                df = df.loc[start_time:end_time]
             if start_time:
                 df = df.loc[start_time:end_time]
             df = (
